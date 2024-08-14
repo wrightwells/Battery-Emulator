@@ -25,6 +25,7 @@
 //#define SANTA_FE_PHEV_BATTERY
 //#define TESLA_MODEL_3_BATTERY
 //#define VOLVO_SPA_BATTERY
+//#define ZERO_14_4_BATTERY
 //#define TEST_FAKE_BATTERY
 //#define DOUBLE_BATTERY  //Enable this line if you use two identical batteries at the same time (requires DUAL_CAN setup)
 
