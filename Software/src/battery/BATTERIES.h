@@ -74,6 +74,10 @@
 #include "VOLVO-SPA-BATTERY.h"
 #endif
 
+#ifdef ZERO_14_4_BATTERY
+#include "ZERO-14-4-BATTERY.h"
+#endif
+
 #ifdef SERIAL_LINK_RECEIVER
 #include "SERIAL-LINK-RECEIVER-FROM-BATTERY.h"
 #endif
