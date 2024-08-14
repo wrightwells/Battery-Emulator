@@ -529,6 +529,9 @@ String processor(const String& var) {
 #ifdef VOLVO_SPA_BATTERY
     content += "Volvo / Polestar 78kWh battery";
 #endif
+#ifdef ZERO_14_4_BATTERY
+    content += "Zero Motorcycle 14.4 battery";
+#endif
 #ifdef TEST_FAKE_BATTERY
     content += "Fake battery for testing purposes";
 #endif
