@@ -7,20 +7,42 @@
 #include "ZERO-14-4-BATTERY.h"
 
 
-/* The CAN messages have been taken from 
+
+
+/* The CAN messages have been taken from these repos, standing on the shoulders and all that.
 -- https://github.com/RIAEvangelist/zero-motorcycle-canbus for CAN messages
 -- https://github.com/RIAEvangelist/zero-motorcycle-canbus for OpenContactor
 */
 
-/* TODO: 
---
+/* Done: 
+-- SOC_Display
+-- batteryAmps
+-- temperatureMax
+-- batteryVoltage
+
+-- Added entries in the follwing files for the ZERO_14_4_BATTERY
+-- Updated BATTRIES.h 
+-- Updated USER_SETTINGS.h 
+-- Updated webserver.cpp
+-- and waisted lots of time getting it to compile successfully , its been 25 years since I coded in C++
+-- it would compile and the USB DEBUG would show any CAN mesages , then I'd compile again and it would. 
 */
 
-/*---------------------------------------------------------------*/
-/* Update Battery settings in USER_SETTINGS*/
-// Predefined total energy capacity of the battery in Watt-hours
-//#define BATTERY_WH_MAX 12000
+/*TODO:
+-- Status where to find it in the sea of CAN messages
+-- Cell data , it must be in the CAN logs somewhere
+-- how to calculate SOH
+-- allowedDischargePower investigate and set the value
+-- allowedChargePower
+*/
 
+/*-------------------UPDATE the USER_SETTINGS.h------------------*/
+/* Update Battery settings in USER_SETTINGS.h */
+// Predefined total energy capacity of the battery in Watt-hours
+// change the #define BATTERY_WH_MAX 10600
+// Zero Motorcycles call thier battery a 14.4Kw but thats not the nominal value , its more like 104 Amp Hours x 102 Volts (104*102)= 10608 or 10.6kw
+// which is accually why they give such low range for the advertised battery size.
+// but when it can be used as a house battery when not being ridden , whoop whoop
 /*---------------------------------------------------------------*/
 
 /* Do not change code below unless you are sure what you are doing */
@@ -48,7 +70,7 @@ static uint8_t StatusBattery = 0;
 static uint16_t cellvoltages_mv[96];
 
 // //open contactor.
-//openContactor[8] = {0x0, 0x31, 0x4, 0xc3, 0x4D, 0x00, 0x0, 0x0};
+//openContactor = {0x0, 0x31, 0x4, 0xc3, 0x4D, 0x00, 0x0, 0x0};
 CAN_frame_t ZERO_14_4_81 = {.FIR = {.B =
                                     {
                                         .DLC = 8,
@@ -192,7 +214,7 @@ void receive_can_battery(CAN_frame_t rx_frame) {
 
 
 	case 0x240:
-		SOC_Display = (rx_frame.data.u8[6]); //SOC
+		SOC_Display = rx_frame.data.u8[6]; //SOC
 		
 		#ifdef DEBUG_VIA_USB
 			Serial.print("SOC=  ");
@@ -292,11 +314,11 @@ void receive_can_battery(CAN_frame_t rx_frame) {
 
 
 	case 0x0388:
-		batteryVoltage = (rx_frame.data.u8[3]); //Voltage
+		//batteryVoltage = 0.001 * rx_frame.data.u8[3] + 0.256 * rx_frame.data.u8[4] + 65.535 * rx_frame.data.u8[5];  //Voltage
 
 		#ifdef DEBUG_VIA_USB
 			Serial.print("Voltage=  ");
-			Serial.print(rx_frame.data.u8[3]);
+			//Serial.print(0.001 * rx_frame.data.u8[3] + 0.256 * rx_frame.data.u8[4] + 65.535 * rx_frame.data.u8[5]); 
 			Serial.println("");
 		#endif
 	break;
@@ -333,7 +355,15 @@ void receive_can_battery(CAN_frame_t rx_frame) {
 		// byte 7 (fixed at 255)
 
 	case 0x0408:
-		temperatureMax = (rx_frame.data.u8[1]); //TEMPERATURE
+		batteryAmps = rx_frame.data.u8[3]; //AMPS
+		
+		#ifdef DEBUG_VIA_USB
+			Serial.print("AMPS=  ");
+			Serial.print(rx_frame.data.u8[3]);
+			Serial.println("");
+		#endif		
+		
+		temperatureMax = rx_frame.data.u8[1]; //TEMPERATURE
 
 		#ifdef DEBUG_VIA_USB
 			Serial.print("TEMPERATURE=  ");
