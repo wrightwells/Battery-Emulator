@@ -12,7 +12,7 @@
 //-- https://github.com/RIAEvangelist/zero-motorcycle-canbus for CAN messages
 /*----------------------*/
 // Done: 
-//-- SOC_Display
+//-- battery_SOC
 //-- batteryAmps
 //-- temperatureMax
 //-- batteryVoltage
@@ -35,6 +35,7 @@
 // Update Battery settings in USER_SETTINGS.h 
 // Predefined total energy capacity of the battery in Watt-hours
 // change the #define BATTERY_WH_MAX 10600
+//change the #define BATTERY_MAX_DISCHARGE_AMP 100
 // Zero Motorcycles call thier battery a 14.4Kw but thats not the nominal value , its more like 104 Amp Hours x 102 Volts (104*102)= 10608 or 10.6kw
 // which is accually why they give such low range for the advertised battery size.
 // but when it can be used as a house battery when not being ridden , whoop whoop
@@ -59,8 +60,8 @@ CAN_frame ZERO_81 = {.FD = false,
 
 
 static bool battery_can_alive = false;
-static uint16_t SOC_Display = 0;
-static uint16_t batterySOH = 100;
+static uint16_t battery_SOC = 0;
+static uint16_t batterySOH = 99;
 static uint16_t CellVoltMax_mV = 3700;
 static uint16_t CellVoltMin_mV = 3700;
 static uint8_t CellVmaxNo = 0;
@@ -76,12 +77,12 @@ static uint8_t counter_200 = 0;
 static uint8_t checksum_200 = 0;
 static uint8_t StatusBattery = 0;
 static uint16_t cellvoltages_mv[96];
-const float scaleFactor = 0.001; // raw data is in millivolts
+const float scaleFactor = 1000; // raw data is in millivolts
 
 
 void update_values_battery() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
 
-  datalayer.battery.status.real_soc = (SOC_Display * 10);  //increase SOC range from 0-100.0 -> 100.00
+  datalayer.battery.status.real_soc = (battery_SOC * 10);  //increase SOC range from 0-100.0 -> 100.00
 
   datalayer.battery.status.soh_pptt = (batterySOH * 100);  //Increase decimals from 100% -> 100.00%
 
@@ -150,7 +151,7 @@ void receive_can_battery(CAN_frame rx_frame) {
         battery_can_alive = true;
         datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;  // Let system know battery is sending CAN
         break;
-//0x0181
+	case 0x0181: {
 
         // ?? byte 0 (0)
         // ?? byte 1 (0)
@@ -160,8 +161,10 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 5
         // ?? byte 6 (byte 6..7 very eratic) look something that balances between 0..40 and 65535..65524 so plus minus someting)
         // ?? byte 7
+	}
+	break;
 
-//0x0188
+	case 0x0188:{
 
         // byte 0 (always 90)
         // ?? byte 1 (always 0)
@@ -171,7 +174,10 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 6 (always 0)
         // ?? byte 7 (always 4 maybe number of bricks ?)
 
-//0x0192
+	}
+	break;
+
+	case 0x0192:{
 
         // ?? byte 0 fixed at 128 during charging
         // ?? byte 1 fixed at 0 during charging
@@ -181,6 +187,9 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 5 fixed at 0 during charging
         // ?? byte 6 very eratic
         // ?? byte 7 very eratic
+
+	}
+	break;
 
 //0x01C0
     
@@ -201,7 +210,7 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 6 (fixed at 0)
         // ?? byte 7 (fixed at 0)
 
-//0x240
+   case 0x240: {
         // CanID 0x0240 byte 0 = Mode
         // if (bitRead(buf[0], 2) == 1) Mode = "Sport ";        //A5                                        
         //if (bitRead(buf[0], 3) == 1) Mode = "Eco   ";       // A9
@@ -214,17 +223,17 @@ void receive_can_battery(CAN_frame rx_frame) {
         // no Byte 7
 
 
-    case 0x240:
-        SOC_Display = static_cast<int16_t>(rx_frame.data.u8[6]); //SOC
+ 
+        battery_SOC = static_cast<int16_t>(rx_frame.data.u8[6]); //SOC
         
         #ifdef DEBUG_VIA_USB
             Serial.print("SOC=  ");
-            Serial.print(rx_frame.data.u8[6]);
+            Serial.print(battery_SOC);
             Serial.println("");
+			Serial.println("");		
         #endif
-        
-    break;
-
+	}
+	break;
 //0x0281
         // ?? byte 0, 1 is motor RPM (same as canID 0x0340 byte 4 and 5)
         // ?? byte 2 (fixed at 0)
@@ -233,9 +242,9 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 6 is motor temperature (second time) this time in 1 byte , not 2 as in canid 440
         // ?? byte 7 (fixed at 0)
 
-// 0x0288
+	case 0x0288:{
 
-// byte 0, 1 Power in Watts
+		// byte 0, 1 Power in Watts
         // ?? byte 2 (fixed at 231) byte 2 .. 7 the same during charging several weeks later
         // ?? byte 3 (fixed at 0)
         // ?? byte 4 (fixed at 50)
@@ -243,6 +252,8 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 6 (fixed at 0)
         // ?? byte 7 (fixed at 18 not any temperature))
 
+	}
+	break;
 //0x0292
 
         //memcpy(canID292, buf, 8);
@@ -265,7 +276,7 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 6 (fixed at 16)
         // ?? byte 7 (fixed at 0)
 
-//0x0306
+	case 0x0306: {
 
         // ?? byte 0 (18/19 during charging) could be a temperature of sme sort
         // ?? byte 1 (176 during charging) 2 during charging several weeks later 30-42-019
@@ -275,7 +286,8 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 5 (255 during charging)
         // ?? byte 6 (255 during charging)
         // ?? byte 7 0 during charging)
-
+	}
+	break;
 //0x0308
 
         // ?? byte 0 (fixed at 34 during standstill and during charging
@@ -287,7 +299,7 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 6 (fixed at 3) 5 during charging several weeks later
         // ?? byte 7 (fixed at 0)
 
-//0x340
+case 0x340: {
 
         // byte 0, 1 is Trip 1
         // ?? byte 2 (always 0) byte 2,3 and 7 the same during charging several weeks later
@@ -296,6 +308,13 @@ void receive_can_battery(CAN_frame rx_frame) {
         // byte 6 (error code on dash, 44 is killswitch, 45 is kickstand etc)
         // ?? byte 7 (always 0)
 
+        #ifdef DEBUG_VIA_USB
+            Serial.print("ERROR_CODE=  ");
+            Serial.print(rx_frame.data.u8[6]);;
+            Serial.println("");	
+		#endif	
+	}
+	break;
 //0x0381
 
         // ?? byte 0 (95/96 during charging) 177-179 during charging several weeks later
@@ -316,11 +335,11 @@ void receive_can_battery(CAN_frame rx_frame) {
 
 
 	case 0x0388: {
-		uint32_t voltage = (rx_frame.data.u8[3] << 16) | 
-						(rx_frame.data.u8[4] << 8)  | 
+		uint32_t voltage = (rx_frame.data.u8[3]) | 
+						(rx_frame.data.u8[4])  | 
 						(rx_frame.data.u8[5]);
 
-		batteryVoltage = static_cast<uint16_t>(voltage * scaleFactor);
+		batteryVoltage = static_cast<uint16_t>(voltage / scaleFactor);
 
 		#ifdef DEBUG_VIA_USB
 			Serial.print("Voltage = ");
@@ -362,24 +381,25 @@ void receive_can_battery(CAN_frame rx_frame) {
         // byte 6 (fixed at 0)
         // byte 7 (fixed at 255)
 
-    case 0x0408:
+    case 0x0408:{
         
-        batteryAmps = (rx_frame.data.u8[3]); // AMPS
+        batteryAmps = (rx_frame.data.u8[3]);
         
         #ifdef DEBUG_VIA_USB
-            Serial.print("AMPS=  ");
+            Serial.print("batteryAmps=  ");
             Serial.print(batteryAmps);
             Serial.println("");
         #endif      
         
-        temperatureMax = (rx_frame.data.u8[1]); //TEMPERATURE
+        temperatureMax = (rx_frame.data.u8[1]);
 
         #ifdef DEBUG_VIA_USB
-            Serial.print("TEMPERATURE=  ");
+            Serial.print("temperatureMax=  ");
             Serial.print(temperatureMax);
             Serial.println("");
         #endif
-        
+
+	}
     break;
 
 
@@ -401,7 +421,7 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 6 (0)
         // ?? byte 7 (0)
     
-//0x0488
+	case 0x0488:{
 
         // ?? byte 0 (0-7 during charging)
         // ?? byte 1 22-25 during charging (battery temperature ??)
@@ -411,7 +431,18 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 5 fixed at 0 during charging
         // ?? byte 6 fixed at 24-31 during charging (charger or battery temperature ??)
         // ?? byte 7 fixed at 15 during charging
-    
+
+
+		temperatureMin = (rx_frame.data.u8[6]);
+
+        #ifdef DEBUG_VIA_USB
+            Serial.print("temperatureMin=  ");
+            Serial.print(temperatureMax);
+            Serial.println("");
+        #endif
+	}
+    break;
+
 // 0x0501
 
         // ?? byte 0 (0 during charging) byte 0 and 1 seem a pair, when regen value of byte 1 goes to 255
@@ -478,8 +509,34 @@ void receive_can_battery(CAN_frame rx_frame) {
         // ?? byte 0 only 1 byte long always 5, acknowledge or closure of data messages
         // no byte 1-7
 
-    
-  }
+    default: {
+	        #ifdef DEBUG_CAN
+				Serial.println("");	
+				Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
+				Serial.print("  ");
+				Serial.print(rx_frame.ID, HEX);
+				Serial.print("  ");
+				Serial.print(rx_frame.DLC);
+				Serial.print("  ");
+				for (int i = 0; i < rx_frame.DLC; ++i) {
+					Serial.print(rx_frame.data.u8[i]); // not HEX
+					Serial.print(" ");
+				}
+				Serial.println("");	
+				Serial.print(rx_frame.ID, HEX);
+				Serial.print("  ");
+				Serial.print(rx_frame.DLC);
+				Serial.print("  ");
+				for (int i = 0; i < rx_frame.DLC; ++i) {
+					Serial.print(rx_frame.data.u8[i], HEX);
+					Serial.print(" ");
+				}
+				Serial.println("");
+			#endif
+	}	
+    break;
+
+  }// end of switch
 }
 
 void send_can_battery() {
