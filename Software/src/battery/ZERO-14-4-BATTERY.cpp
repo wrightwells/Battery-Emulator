@@ -4,7 +4,6 @@
 #include "../datalayer/datalayer.h"
 #include "../devboard/utils/events.h"
 
-
 /*----------------------*/
 // WIKI
 // https://github.com/wrightwells/Battery-Emulator/wiki/Zero-Motorcycle-14.4-Battery 
@@ -118,7 +117,7 @@ void update_values_battery() {  //This function maps all the values fetched via 
   Serial.print("SOH%: ");
   Serial.print(datalayer.battery.status.soh_pptt);
   Serial.print(", SOC% scaled: ");
-  Serial.print(datalayer.battery.status.reported_soc);
+  Serial.print(datalayer.battery.status.real_soc);
   Serial.print(", Voltage: ");
   Serial.print(datalayer.battery.status.voltage_dV);
   Serial.print(", Max discharge power: ");
@@ -151,6 +150,43 @@ void receive_can_battery(CAN_frame rx_frame) {
         battery_can_alive = true;
         datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;  // Let system know battery is sending CAN
         break;
+	
+	
+	case 0x1C0: {
+
+        // ?? byte 0 (0)dash volts
+		 // ?? byte 1 (0) dask volts
+		#ifdef DEBUG_VIA_USB
+			Serial.print("dash volts = ");
+			Serial.print((rx_frame.data.u8[0]) + 
+							(rx_frame.data.u8[1])); 
+			Serial.println("");
+		#endif   
+		#ifdef DEBUG_CAN
+			Serial.println("");	
+			Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
+			Serial.print("  ");
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i], HEX);
+				Serial.print(" ");
+			}
+			Serial.println("");	
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i]);
+				Serial.print(" ");
+			}
+			Serial.println("");
+		#endif
+	}
+	break;
 	case 0x0181: {
 
         // ?? byte 0 (0)
@@ -232,6 +268,29 @@ void receive_can_battery(CAN_frame rx_frame) {
             Serial.println("");
 			Serial.println("");		
         #endif
+		#ifdef DEBUG_CAN
+			Serial.println("");	
+			Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
+			Serial.print("  ");
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i], HEX);
+				Serial.print(" ");
+			}
+			Serial.println("");	
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i]);
+				Serial.print(" ");
+			}
+			Serial.println("");
+		#endif
 	}
 	break;
 //0x0281
@@ -312,7 +371,30 @@ case 0x340: {
             Serial.print("ERROR_CODE=  ");
             Serial.print(rx_frame.data.u8[6]);;
             Serial.println("");	
-		#endif	
+		#endif
+		#ifdef DEBUG_CAN
+			Serial.println("");	
+			Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
+			Serial.print("  ");
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i], HEX);
+				Serial.print(" ");
+			}
+			Serial.println("");	
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i]);
+				Serial.print(" ");
+			}
+			Serial.println("");
+		#endif			
 	}
 	break;
 //0x0381
@@ -335,9 +417,9 @@ case 0x340: {
 
 
 	case 0x0388: {
-		uint32_t voltage = (rx_frame.data.u8[3]) | 
-						(rx_frame.data.u8[4])  | 
-						(rx_frame.data.u8[5]);
+		uint32_t voltage =(0.001 * (rx_frame.data.u8[3]) + 
+						0.256 * (rx_frame.data.u8[4]) + 
+						65.535 * (rx_frame.data.u8[5]));
 
 		batteryVoltage = static_cast<uint16_t>(voltage / scaleFactor);
 
@@ -346,10 +428,77 @@ case 0x340: {
 			Serial.print(batteryVoltage); 
 			Serial.println("");
 		#endif
+		#ifdef DEBUG_CAN
+			Serial.println("");	
+			Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
+			Serial.print("  ");
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i], HEX);
+				Serial.print(" ");
+			}
+			Serial.println("");	
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i]);
+				Serial.print(" ");
+			}
+			Serial.println("");
+		#endif		
 	}
 	break;
 
+	case 0x389:{
 
+         // ?? byte 0 (
+        // ?? byte 1 
+        // ?? byte 2 
+        // ?? byte 3 pack voltage
+        // ?? byte 4 pack voltage
+        // ?? byte 5 pack voltage
+        // ?? byte 6 pack voltage
+        // ?? byte 7 
+ 		
+
+		#ifdef DEBUG_VIA_USB
+			Serial.print("P_Voltage = ");
+			Serial.print((rx_frame.data.u8[3]) + 
+							(rx_frame.data.u8[4]) + 
+							(rx_frame.data.u8[5]) +
+							(rx_frame.data.u8[6])); 
+			Serial.println("");
+		#endif
+		#ifdef DEBUG_CAN
+			Serial.println("");	
+			Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
+			Serial.print("  ");
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i], HEX);
+				Serial.print(" ");
+			}
+			Serial.println("");	
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i]);
+				Serial.print(" ");
+			}
+			Serial.println("");
+		#endif
+	}
+	break;   
 
 //0x03C0
 
@@ -376,15 +525,19 @@ case 0x340: {
         // byte 0 (always 0 during charging)
         // byte 1 is battery temp in celcius
         // byte 2 (always 20 during charging)
-        // byte 3 battery amps, both when charging and
-        // byte 5 seems to be the current number of Ah in the battery (fixed at 131, 66 during charging, later 118)
+        // byte 3 battery amps, both when charging 
+		// byte 4 example 0
+        // byte 5 example 36 (036 Dec = 54A which is correct )scurrent number of Ah in the battery (fixed at 131, 66 during charging, later 118)
         // byte 6 (fixed at 0)
         // byte 7 (fixed at 255)
 
     case 0x0408:{
         
-        batteryAmps = (rx_frame.data.u8[3]);
-        
+
+		batteryAmps =(rx_frame.data.u8[4] + 
+                 	rx_frame.data.u8[5]);
+
+
         #ifdef DEBUG_VIA_USB
             Serial.print("batteryAmps=  ");
             Serial.print(batteryAmps);
@@ -398,7 +551,29 @@ case 0x340: {
             Serial.print(temperatureMax);
             Serial.println("");
         #endif
-
+		#ifdef DEBUG_CAN
+			Serial.println("");	
+			Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
+			Serial.print("  ");
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i], HEX);
+				Serial.print(" ");
+			}
+			Serial.println("");	
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i]);
+				Serial.print(" ");
+			}
+			Serial.println("");
+		#endif
 	}
     break;
 
@@ -437,9 +612,32 @@ case 0x340: {
 
         #ifdef DEBUG_VIA_USB
             Serial.print("temperatureMin=  ");
-            Serial.print(temperatureMax);
+            Serial.print(temperatureMin);
             Serial.println("");
         #endif
+		#ifdef DEBUG_CAN
+			Serial.println("");	
+			Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
+			Serial.print("  ");
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i], HEX);
+				Serial.print(" ");
+			}
+			Serial.println("");	
+			Serial.print(rx_frame.ID, HEX);
+			Serial.print("  ");
+			Serial.print(rx_frame.DLC);
+			Serial.print("  ");
+			for (int i = 0; i < rx_frame.DLC; ++i) {
+				Serial.print(rx_frame.data.u8[i]);
+				Serial.print(" ");
+			}
+			Serial.println("");
+		#endif
 	}
     break;
 
@@ -519,7 +717,7 @@ case 0x340: {
 				Serial.print(rx_frame.DLC);
 				Serial.print("  ");
 				for (int i = 0; i < rx_frame.DLC; ++i) {
-					Serial.print(rx_frame.data.u8[i]); // not HEX
+					Serial.print(rx_frame.data.u8[i], HEX);
 					Serial.print(" ");
 				}
 				Serial.println("");	
@@ -528,7 +726,7 @@ case 0x340: {
 				Serial.print(rx_frame.DLC);
 				Serial.print("  ");
 				for (int i = 0; i < rx_frame.DLC; ++i) {
-					Serial.print(rx_frame.data.u8[i], HEX);
+					Serial.print(rx_frame.data.u8[i]);
 					Serial.print(" ");
 				}
 				Serial.println("");
@@ -565,7 +763,7 @@ void send_can_battery() {
 
 void setup_battery(void) {  // Performs one time setup at startup
 #ifdef DEBUG_VIA_USB
-  Serial.println("ZERO 14.4 battery selected");
+  Serial.println("ZERO 14.4 battery");
 #endif
   datalayer.battery.info.number_of_cells = 112;
   datalayer.battery.info.max_design_voltage_dV = 1160;  // Over this charging is not possible 114Ah x 116V
