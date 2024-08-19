@@ -9,6 +9,10 @@ int miso = 2;
 int mosi = 15;
 int cs = 13;
 
+#define BUFFER_SIZE 512
+char dataBuffer[BUFFER_SIZE];
+size_t bufferIndex = 0; 
+String LogName = "tmp.txt";
 
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
@@ -181,11 +185,12 @@ void testFileIO(fs::FS &fs, const char *path) {
   file.close();
 }
 
-void setupLogToSD() {
+void setupLogToSD(const String &BatteryName) {
   Serial.begin(115200);
   while (!Serial) {
     delay(10);
   }
+LogName = BatteryName;
 
 #ifdef REASSIGN_PINS
   SPI.begin(sck, miso, mosi, cs);
@@ -234,4 +239,30 @@ void setupLogToSD() {
   Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
   Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
   #endif
+}
+
+void addToBuffer(const String &logData) {
+  size_t dataLength = logData.length();
+
+  // Check if buffer has enough space
+  if (bufferIndex + dataLength >= BUFFER_SIZE) {
+    flushBufferToSD();
+  }
+
+  // Add data to buffer
+  logData.toCharArray(&dataBuffer[bufferIndex], dataLength + 1);
+  bufferIndex += dataLength;
+}
+
+void flushBufferToSD() {
+  if (bufferIndex == 0) return; // Nothing to write
+
+  // Null-terminate the buffer to ensure it's treated as a C-string
+  dataBuffer[bufferIndex] = '\0';
+
+  // Use appendFile to write the buffer content
+  appendFile(SD, LogName.c_str(), dataBuffer);
+
+  // Clear the buffer
+  bufferIndex = 0;
 }
