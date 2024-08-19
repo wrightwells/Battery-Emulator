@@ -150,7 +150,7 @@ void setup_battery(void) {  // Performs one time setup at startup
 
 #ifdef LogToSD
   setupLogToSD();
-  createDir(SD, "/FAKE_BATTERY");
+  //createDir(SD, "/FAKE_BATTERY");
   writeFile(SD, "/FAKE_BATTERY.txt", "******************    Start of new messages        *************************");
 #endif
 
