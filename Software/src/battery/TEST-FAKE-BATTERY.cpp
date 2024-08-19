@@ -3,6 +3,14 @@
 #include "../datalayer/datalayer.h"
 #include "TEST-FAKE-BATTERY.h"
 
+#ifdef LogToSD
+#include "../devboard/utils/LogToSD.h"
+#include <FS.h>
+char buffer[50];  
+char msgString[4];
+String logData = "";
+#endif
+
 /* Do not change code below unless you are sure what you are doing */
 static unsigned long previousMillis10 = 0;   // will store last time a 10ms CAN Message was send
 static unsigned long previousMillis100 = 0;  // will store last time a 100ms CAN Message was send
@@ -71,6 +79,7 @@ void update_values_battery() { /* This function puts fake values onto the parame
 #endif
 }
 
+/*
 void receive_can_battery(CAN_frame rx_frame) {
   datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
   // All CAN messages recieved will be logged via serial
@@ -86,6 +95,44 @@ void receive_can_battery(CAN_frame rx_frame) {
   }
   Serial.println("");
 }
+*/
+
+
+void receive_can_battery(CAN_frame rx_frame) {
+  datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+  // All CAN messages recieved will be logged via serial
+  Serial.print(millis()); 
+  Serial.print("  ");
+  Serial.print(rx_frame.ID, HEX);
+  Serial.print("  ");
+  Serial.print(rx_frame.DLC);
+  Serial.print("  ");
+  
+  #ifdef LogToSD
+  String logData = String(millis()) + "  " + String(rx_frame.ID, HEX) + "  " + String(rx_frame.DLC) + "  ";
+  #endif
+  
+  for (int i = 0; i < rx_frame.DLC; ++i) {
+    sprintf(msgString, "%.2X", rx_frame.data.u8[i]);
+    Serial.print(msgString);
+    Serial.print(" ");
+    
+    #ifdef LogToSD
+    logData += String(msgString) + " ";
+    #endif
+  }
+
+  Serial.println("");
+  
+  Serial.println(logData); //test
+
+  #ifdef LogToSD
+  logData += "\n";
+  appendFile(SD, "/FAKE_BATTERY.txt", logData.c_str());
+  #endif
+}
+
+
 void send_can_battery() {
   unsigned long currentMillis = millis();
   // Send 100ms CAN Message
@@ -99,6 +146,12 @@ void send_can_battery() {
 void setup_battery(void) {  // Performs one time setup at startup
 #ifdef DEBUG_VIA_USB
   Serial.println("Test mode with fake battery selected");
+#endif
+
+#ifdef LogToSD
+  setupLogToSD();
+  createDir(SD, "/FAKE_BATTERY");
+  writeFile(SD, "/FAKE_BATTERY.txt", "******************    Start of new messages        *************************");
 #endif
 
   datalayer.battery.info.max_design_voltage_dV =
