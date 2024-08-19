@@ -109,11 +109,11 @@ void receive_can_battery(CAN_frame rx_frame) {
   Serial.print("  ");
   
   #ifdef LogToSD
-  String logData = String(millis()) + "  " + String(rx_frame.ID, HEX) + "  " + String(rx_frame.DLC) + "  ";
+  String logData = String(millis()) + "  " + String(rx_frame.ID, HEX) + "  " + String(rx_frame.DLC) + " ";
   #endif
   
   for (int i = 0; i < rx_frame.DLC; ++i) {
-    sprintf(msgString, "%.2X", rx_frame.data.u8[i]);
+    sprintf(msgString, "%.2X", rx_frame.data.u8[i], HEX);
     Serial.print(msgString);
     Serial.print(" ");
     
@@ -128,7 +128,8 @@ void receive_can_battery(CAN_frame rx_frame) {
 
   #ifdef LogToSD
   logData += "\n";
-  appendFile(SD, "/FAKE_BATTERY.txt", logData.c_str());
+  addToBuffer(logData);
+  //appendFile(SD, "/FAKE_BATTERY.txt", logData.c_str());
   #endif
 }
 
@@ -149,9 +150,8 @@ void setup_battery(void) {  // Performs one time setup at startup
 #endif
 
 #ifdef LogToSD
-  setupLogToSD();
-  //createDir(SD, "/FAKE_BATTERY");
-  writeFile(SD, "/FAKE_BATTERY.txt", "******************    Start of new messages        *************************");
+  setupLogToSD("/FAKE_BATTERY.txt");
+  //writeFile(SD, "/FAKE_BATTERY.txt", "******************    Start of new messages        *************************");
 #endif
 
   datalayer.battery.info.max_design_voltage_dV =
