@@ -207,6 +207,8 @@ LogName = BatteryName;
     Serial.println("No SD card attached");
     return;
   }
+
+  writeFile(SD, LogName.c_str(), "******************    Start of new messages        *************************");
 #ifdef DEBUG_VIA_USB
   Serial.print("SD Card Type: ");
   if (cardType == CARD_MMC) {
@@ -252,6 +254,9 @@ void addToBuffer(const String &logData) {
   // Add data to buffer
   logData.toCharArray(&dataBuffer[bufferIndex], dataLength + 1);
   bufferIndex += dataLength;
+  #ifdef DEBUG_VIA_USB
+  Serial.print("LogToSD.addToBuffer");
+  #endif
 }
 
 void flushBufferToSD() {
@@ -262,6 +267,10 @@ void flushBufferToSD() {
 
   // Use appendFile to write the buffer content
   appendFile(SD, LogName.c_str(), dataBuffer);
+
+  #ifdef DEBUG_VIA_USB
+  Serial.print("LogToSD.flushBuffer");
+  #endif
 
   // Clear the buffer
   bufferIndex = 0;
