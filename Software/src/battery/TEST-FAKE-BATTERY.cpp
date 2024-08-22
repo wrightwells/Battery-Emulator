@@ -79,25 +79,6 @@ void update_values_battery() { /* This function puts fake values onto the parame
 #endif
 }
 
-/*
-void receive_can_battery(CAN_frame rx_frame) {
-  datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
-  // All CAN messages recieved will be logged via serial
-  Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
-  Serial.print("  ");
-  Serial.print(rx_frame.ID, HEX);
-  Serial.print("  ");
-  Serial.print(rx_frame.DLC);
-  Serial.print("  ");
-  for (int i = 0; i < rx_frame.DLC; ++i) {
-    Serial.print(rx_frame.data.u8[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println("");
-}
-*/
-
-
 void receive_can_battery(CAN_frame rx_frame) {
   datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
   // All CAN messages recieved will be logged via serial
@@ -108,27 +89,33 @@ void receive_can_battery(CAN_frame rx_frame) {
   Serial.print(rx_frame.DLC);
   Serial.print("  ");
   
-  #ifdef LogToSD
-  String logData = String(millis()) + "  " + String(rx_frame.ID, HEX) + "  " + String(rx_frame.DLC) + " ";
+#ifdef LogToSD
+  #ifndef LogSavvyCAN
+    String logData = String(millis()) + "  " + String(rx_frame.ID, HEX) + "  " + String(rx_frame.DLC) + " ";
+  #else
+    String logData = String(millis()) + "," + String(rx_frame.ID, HEX) + ",false,0," + String(rx_frame.DLC) + ",";
   #endif
+#endif
   
   for (int i = 0; i < rx_frame.DLC; ++i) {
-    sprintf(msgString, "%.2X", rx_frame.data.u8[i], HEX);
+    sprintf(msgString, "%.2X", rx_frame.data.u8[i]);
     Serial.print(msgString);
     Serial.print(" ");
     
     #ifdef LogToSD
-    logData += String(msgString) + " ";
+      #ifndef LogSavvyCAN
+        logData += String(msgString) + " ";
+      #else
+        logData += String(msgString) + ",";
+      #endif
     #endif
   }
 
-  Serial.println("");
+  //Serial.println("");
   
-  //Serial.println(logData); //test
-
   #ifdef LogToSD
-  logData += "\n";
-  addToBuffer(logData);
+    logData += "'\n";
+    addToBuffer(logData);
   #endif
 }
 
@@ -149,11 +136,10 @@ void setup_battery(void) {  // Performs one time setup at startup
 #endif
 
 #ifdef LogToSD
-  setupLogToSD("/FAKE_BATTERY.txt");
+  setupLogToSD("FAKE_BATTERY");
 #endif
 
-  datalayer.battery.info.max_design_voltage_dV =
-      4040;  // 404.4V, over this, charging is not possible (goes into forced discharge)
+  datalayer.battery.info.max_design_voltage_dV = 4040;  // 404.4V, over this, charging is not possible (goes into forced discharge)
   datalayer.battery.info.min_design_voltage_dV = 2450;  // 245.0V under this, discharging further is disabled
 }
 
