@@ -94,7 +94,7 @@ static uint8_t counter_200 = 0;
 static uint8_t checksum_200 = 0;
 static uint8_t StatusBattery = 0;
 static uint16_t cellvoltages_mv[96];
-const float scaleFactor = 1000; // raw data is in millivolts
+const float scaleFactor = 0.256; // raw data is in millivolts
 
 
 void update_values_battery() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
@@ -103,7 +103,7 @@ void update_values_battery() {  //This function maps all the values fetched via 
 
   datalayer.battery.status.soh_pptt = (batterySOH * 100);  //Increase decimals from 100% -> 100.00%
 
-  datalayer.battery.status.voltage_dV = batteryVoltage;
+  datalayer.battery.status.voltage_dV = (batteryVoltage * 10);
 
   datalayer.battery.status.current_dA = batteryAmps;
 
@@ -180,7 +180,7 @@ logData = "";
 
 
 //Pack Discharge Current    : -13A look for D or -D in CAN
-
+//https://docs.google.com/spreadsheets/d/1qHEkHcae3YmAE4pvRNnzQlWAO7wV40vipX8TYn6sNuY/edit?gid=282429578#gid=282429578
 
 
 //"DASH_STATUS",0x1C0}
@@ -193,7 +193,10 @@ logData = "";
 
 
    case 0x240: {
- 
+        /*--------WORKING---------------*/
+        /*--------WORKING---------------*/
+        /*--------WORKING---------------*/
+        /*--------WORKING---------------*/
         battery_SOC = static_cast<int16_t>(rx_frame.data.u8[6]); //SOC CORRECT
         //4A = 74
         
@@ -309,13 +312,17 @@ logData = "";
                    //AC 01 00
 
 
-                uint16_t voltage = (rx_frame.data.u8[4]) | 
-                    (rx_frame.data.u8[5]) | 
-                    rx_frame.data.u8[6];
-                    // HEX A40100 DEC 10748160 /1000 = 107.4816
-                  
+               // uint16_t voltage = (rx_frame.data.u8[4]) | 
+               //     (rx_frame.data.u8[5]) | 
+               //     rx_frame.data.u8[6];
+               //     // HEX A40100 DEC 10748160 /1000 = 107.4816
 
-              batteryVoltage = static_cast<uint16_t>(voltage) / scaleFactor;
+              int16_t voltage = (static_cast<int16_t>(rx_frame.data.u8[6]) << 16) | 
+                                (static_cast<int16_t>(rx_frame.data.u8[5]) << 8) | 
+                                static_cast<int16_t>(rx_frame.data.u8[4]);
+
+              batteryVoltage = static_cast<uint16_t>(voltage) * scaleFactor;
+
 
               #ifdef DEBUG_VIA_USB
                 Serial.print("batteryVoltage = ");
@@ -337,16 +344,10 @@ logData = "";
 //"BMS_PACK_ACTIVE_DATA",0x408
          case 0x0408:{
           // Battery AH 
-
-          //BatteryTemp = buf[1];   
-          //BatteryAmps = buf[3] + 256 * buf[4];  
-
-          //404 batteryAmps=  53
-          //408 8 00 14 13 00 00 35 00 FF 
-          //408 8 00 17 16 F4 FF 3B 00 FF
-
-          //HEX 00 35
-          //DEC 0 53
+          /*--------WORKING---------------*/
+          /*--------WORKING---------------*/
+          /*--------WORKING---------------*/
+          /*--------WORKING---------------*/
         
 		           batteryAmps = (rx_frame.data.u8[4] | 
                  	rx_frame.data.u8[5]);
@@ -364,6 +365,57 @@ logData = "";
                 // Add data to buffer
                 addToBuffer(logData);
                 #endif
+
+
+
+          /*--------TESTING---------------*/
+          /*--------TESTING---------------*/
+          /*--------TESTING---------------*/
+          /*--------TESTING---------------*/
+
+
+                temperatureMax = static_cast<int8_t>(rx_frame.data.u8[1]);
+                // HEX 12 = DEC 18
+                // HEX 13 = DEC 19
+                // HEX 15 = DEC 21
+
+                #ifdef DEBUG_VIA_USB
+                Serial.print("temperatureMax=  ");
+                Serial.print(temperatureMax);
+                Serial.println("");
+                #endif
+                #ifdef LogToSD
+                logData += "488 temperatureMax= ";
+                logData += temperatureMax;
+                logData += "\n";
+                  // Add data to buffer
+                addToBuffer(logData);
+                #endif
+
+                /*temperatureMin = static_cast<int8_t>(rx_frame.data.u8[2]) / 10;
+                 // HEX B0 = DEC 176
+                 // HEX AF = DEC 175
+                 // HEX FF = DEC 255 ERROR during startup
+                 // HEX 89 = DEC 137
+                */
+                temperatureMin = static_cast<int8_t>(rx_frame.data.u8[2]); 
+                //HEX OF DEC 15 moving up to
+                //HEX 10 DEC 16
+
+                #ifdef DEBUG_VIA_USB
+                Serial.print("temperatureMin=  ");
+                Serial.print(temperatureMin);
+                Serial.println("");
+                #endif
+                #ifdef LogToSD
+                logData += "488 temperatureMin= ";
+                logData += temperatureMin;
+                logData += "\n";
+                  // Add data to buffer
+                addToBuffer(logData);
+                #endif
+
+
 	}
   break;
 
@@ -372,7 +424,7 @@ logData = "";
 //"DASH_STATUS2",0x440}
 
 //"BMS_PACK_TEMP_DATA",0x488
-  case 0x0488:{
+/*  case 0x0488:{ //confusion over BMS_PACK_TEMP_DATA and BMS_PACK_ACTIVE_DATA
 
 
 
@@ -406,12 +458,12 @@ logData = "";
                 addToBuffer(logData);
                 #endif
 
-                /*temperatureMin = static_cast<int8_t>(rx_frame.data.u8[2]) / 10;
+                //temperatureMin = static_cast<int8_t>(rx_frame.data.u8[2]) / 10;
                  // HEX B0 = DEC 176
                  // HEX AF = DEC 175
                  // HEX FF = DEC 255 ERROR during startup
                  // HEX 89 = DEC 137
-                */
+                
                 temperatureMin = static_cast<int8_t>(rx_frame.data.u8[4]); // looking at CAN [2] is random nut [4] appears to be lower then Max 
                 //HEX OF DEC 15 moving up to
                 //HEX 10 DEC 16
@@ -430,6 +482,7 @@ logData = "";
                 #endif
 	}
   break;
+  */
 //"BMS1_PACK_TEMP_DATA",0x489
 
 //"BMS_CONTROL",0x506  
@@ -513,36 +566,9 @@ void setup_battery(void) {  // Performs one time setup at startup
   //writeFile(SD, "/ZERO_14_4_BATTERY.txt", "******************    Start of new messages        *************************");
 #endif
 
-  datalayer.battery.info.number_of_cells = 112;
+  datalayer.battery.info.number_of_cells = 96;
   datalayer.battery.info.max_design_voltage_dV = 1160;  // Over this charging is not possible 114Ah x 116V
   datalayer.battery.info.min_design_voltage_dV = 950;  // Under this discharging is disabled 114Ah x 95V
 }
 
-/*
-void addToBuffer(const String &logData) {
-  size_t dataLength = logData.length();
-
-  // Check if buffer has enough space
-  if (bufferIndex + dataLength >= BUFFER_SIZE) {
-    flushBufferToSD();
-  }
-
-  // Add data to buffer
-  logData.toCharArray(&dataBuffer[bufferIndex], dataLength + 1);
-  bufferIndex += dataLength;
-}
-
-void flushBufferToSD() {
-  if (bufferIndex == 0) return; // Nothing to write
-
-  // Null-terminate the buffer to ensure it's treated as a C-string
-  dataBuffer[bufferIndex] = '\0';
-
-  // Use appendFile to write the buffer content
-  appendFile(SD, "/ZERO_14_4_BATTERY.txt", dataBuffer);
-
-  // Clear the buffer
-  bufferIndex = 0;
-}
-*/
 #endif
