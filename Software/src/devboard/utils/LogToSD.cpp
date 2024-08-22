@@ -1,4 +1,5 @@
 #include <FS.h>
+#include "../../include.h"
 #include "../../lib/SD/src/SD.h"
 #include <SPI.h>
 #include "LogToSD.h"
@@ -190,7 +191,7 @@ void setupLogToSD(const String &BatteryName) {
   while (!Serial) {
     delay(10);
   }
-LogName = BatteryName;
+LogName = "/" + BatteryName + ".txt";
 
 #ifdef REASSIGN_PINS
   SPI.begin(sck, miso, mosi, cs);
@@ -208,7 +209,24 @@ LogName = BatteryName;
     return;
   }
 
+  // Check if the file exists and increment the filename if necessary
+  //int fileIndex = 1;
+  //while (SD.exists(LogName.c_str())) {
+  //  LogName = "/" + BatteryName + String(fileIndex) + ".txt";
+  //  fileIndex++;
+      #ifdef DEBUG_VIA_USB
+      Serial.println(LogName);
+      #endif
+  //}
+
+#ifndef LogSavvyCAN
   writeFile(SD, LogName.c_str(), "******************    Start of new messages        *************************");
+#else
+  writeFile(SD, LogName.c_str(), "Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8\n");
+#endif
+
+
+
 #ifdef DEBUG_VIA_USB
   Serial.print("SD Card Type: ");
   if (cardType == CARD_MMC) {
@@ -255,7 +273,7 @@ void addToBuffer(const String &logData) {
   logData.toCharArray(&dataBuffer[bufferIndex], dataLength + 1);
   bufferIndex += dataLength;
   #ifdef DEBUG_VIA_USB
-  Serial.print("LogToSD.addToBuffer");
+  Serial.println("LogToSD.addToBuffer");
   #endif
 }
 
@@ -269,7 +287,7 @@ void flushBufferToSD() {
   appendFile(SD, LogName.c_str(), dataBuffer);
 
   #ifdef DEBUG_VIA_USB
-  Serial.print("LogToSD.flushBuffer");
+  Serial.println("LogToSD.flushBuffer");
   #endif
 
   // Clear the buffer
