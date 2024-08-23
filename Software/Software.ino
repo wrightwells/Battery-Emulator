@@ -30,6 +30,10 @@
 #include "src/devboard/webserver/webserver.h"
 #endif
 
+#ifdef LogToSD
+#include "src/devboard/utils/LogToSD.h"
+#endif
+
 Preferences settings;  // Store user settings
 // The current software version, shown on webserver
 const char* version_number = "6.6.dev";
